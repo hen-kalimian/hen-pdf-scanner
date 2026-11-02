@@ -106,7 +106,7 @@ h1{font:800 28px/1.2 var(--display);margin:0;color:var(--berry)}
   <header>
     <h1>סורק PDF של חן</h1>
     <p class="sub">מצלמת או בוחרת מהגלריה, ומקבלת PDF נקי כמו מסורק</p>
-    <p class="sub" style="font-size:12px">גרסה 2 · היסטוריה וחיתוך שוליים</p>
+    <p class="sub" style="font-size:12px">גרסה 3 · נשמר גם אם נסגר באמצע</p>
   </header>
 
   <div class="actions">
@@ -345,6 +345,7 @@ function render(){
   $("count").textContent=has?(pages.length===1?"דף אחד":pages.length+" דפים, יחד ב-PDF אחד"):"";
   $("empty").hidden=has||histCount>0;
   grid.innerHTML="";
+  scheduleDraft();
   pages.forEach(function(p,i){
     var card=document.createElement("div"); card.className="card";
     var th=document.createElement("div"); th.className="thumb";
@@ -480,6 +481,7 @@ function shareRec(rec){
 }
 function renderHistory(){
   return dbAll().then(function(list){
+    list=list.filter(function(r){return r.id!=="draft"});
     list.sort(function(a,b){return b.date-a.date});
     histCount=list.length;
     $("hist").hidden=!list.length;
@@ -515,9 +517,30 @@ function renderHistory(){
   });
 }
 $("bNew").onclick=function(){
-  pages=[]; recId=null; $("fname").value=defName(); note(""); render(); window.scrollTo(0,0);
+  pages=[]; recId=null; $("fname").value=defName(); note(""); render(); window.scrollTo(0,0); if(db)dbDel("draft");
 };
-dbOpen().then(renderHistory);
+var draftT=null;
+function scheduleDraft(){clearTimeout(draftT);draftT=setTimeout(saveDraft,600)}
+function saveDraft(){
+  if(!db)return;
+  if(!pages.length){dbDel("draft");return}
+  Promise.all(pages.map(function(p){return p.blob?Promise.resolve(p.blob):new Promise(function(r){p.src.toBlob(function(b){p.blob=b;r(b)},"image/jpeg",0.9)})})).then(function(bl){
+    dbPut({id:"draft",pages:pages.map(function(p,i){return{blob:bl[i],rot:p.rot}}),mode:mode,name:$("fname").value,recId:recId}).catch(function(){});
+  });
+}
+$("fname").addEventListener("input",scheduleDraft);
+function restoreDraft(){
+  return dbGet("draft").then(function(d){
+    if(!d||!d.pages||!d.pages.length||pages.length)return;
+    return Promise.all(d.pages.map(function(x){return fileToCanvas(x.blob)})).then(function(cs){
+      pages=cs.map(function(c,i){return{id:++seq,src:c,rot:d.pages[i].rot,blob:d.pages[i].blob}});
+      mode=d.mode||mode; recId=d.recId||null; if(d.name)$("fname").value=d.name;
+      Array.prototype.forEach.call($("chips").children,function(x){if(x.dataset&&x.dataset.m)x.setAttribute("aria-pressed",x.dataset.m===mode?"true":"false")});
+      render(); note("החזרתי את הסריקה שלא סיימת");
+    });
+  }).catch(function(){});
+}
+dbOpen().then(renderHistory).then(restoreDraft);
 
 /* ---------- עזר ---------- */
 function busy(t){unbusy();var d=document.createElement("div");d.className="busy";d.id="busy";d.innerHTML="<div>"+t+"</div>";document.body.appendChild(d)}
