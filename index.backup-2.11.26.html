@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FDE1EA">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="סורק PDF">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>סורק PDF של חן</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&family=Rubik:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --pink-bg:#FDE1EA; --pink:#FBC5D6; --fuchsia:#EF406E; --berry:#B8236B;
+  --mint:#D9F2E8; --sky:#DCEEFB; --paper:#FFFFFF; --ink:#4A2B3A; --muted:#8A6A78;
+  --line:#F3C9D8;
+  --display:"Rubik","Arial Hebrew",Arial,sans-serif; --body:"Open Sans","Arial Hebrew",Arial,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0}
+body{background:var(--pink-bg);color:var(--ink);font:16px/1.5 var(--body);min-height:100vh;
+  padding-bottom:calc(150px + env(safe-area-inset-bottom,0px))}
+.wrap{max-width:720px;margin:0 auto;padding:0 16px}
+header{padding:calc(20px + env(safe-area-inset-top,0px)) 0 8px;text-align:center}
+h1{font:800 28px/1.2 var(--display);margin:0;color:var(--berry)}
+.sub{margin:6px 0 0;color:var(--muted);font-size:15px}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0}
+.big{border:0;border-radius:20px;padding:20px 12px;font:700 18px var(--display);cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:8px;color:var(--ink)}
+.big svg{width:34px;height:34px}
+.big.cam{background:var(--fuchsia);color:#fff}
+.big.gal{background:var(--paper);border:2px solid var(--pink)}
+.big:active{transform:scale(.98)}
+.empty{background:var(--paper);border:2px dashed var(--pink);border-radius:20px;padding:24px 18px;text-align:center}
+.empty b{font-family:var(--display);color:var(--berry)}
+.steps{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:14px}
+.step{background:var(--mint);border-radius:14px;padding:8px 12px;font-size:14px}
+.step:nth-child(2){background:var(--sky)}.step:nth-child(3){background:var(--pink)}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 14px}
+.chip{border:2px solid var(--pink);background:var(--paper);border-radius:999px;padding:7px 14px;font:600 14px var(--body);color:var(--ink);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--fuchsia);border-color:var(--fuchsia);color:#fff}
+.count{font:700 16px var(--display);margin:0 0 10px;color:var(--berry)}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media(min-width:560px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.card{background:var(--paper);border-radius:16px;padding:8px;border:2px solid var(--line);display:flex;flex-direction:column;gap:8px;min-width:0}
+.thumb{background:#f6eef1;border-radius:10px;aspect-ratio:3/4;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+.thumb canvas{max-width:100%;max-height:100%;display:block}
+.num{position:absolute;top:6px;right:6px;background:var(--fuchsia);color:#fff;font:700 13px var(--display);border-radius:999px;min-width:24px;height:24px;display:grid;place-items:center;padding:0 6px}
+.tools{display:flex;justify-content:space-between;gap:4px}
+.tools button{flex:1;border:0;background:var(--pink-bg);border-radius:10px;height:38px;cursor:pointer;color:var(--berry);display:grid;place-items:center}
+.tools button:disabled{opacity:.35;cursor:default}
+.tools svg{width:20px;height:20px}
+.tools .del{color:#C0264F}
+.bar{position:fixed;inset:auto 0 0 0;background:var(--paper);border-top:2px solid var(--pink);
+  padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));z-index:5}
+.bar .in{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
+.name{width:100%;border:2px solid var(--pink);border-radius:12px;padding:10px 12px;font:600 16px var(--body);color:var(--ink);background:#fff}
+.row{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:8px}
+.btn{border:0;border-radius:14px;padding:13px 6px;font:700 16px var(--display);cursor:pointer;color:var(--ink);display:flex;align-items:center;justify-content:center;gap:6px}
+.btn svg{width:20px;height:20px;flex:none}
+.btn.share{background:var(--fuchsia);color:#fff}
+.btn.wa{background:var(--mint)}
+.btn.mail{background:var(--sky)}
+.btn.dl{background:var(--pink-bg);grid-column:1/-1;padding:10px}
+.btn:disabled{opacity:.4;cursor:default}
+.note{font-size:13px;color:var(--muted);text-align:center;min-height:19px;margin:0}
+.busy{position:fixed;inset:0;background:rgba(253,225,234,.85);display:grid;place-items:center;z-index:20;font:700 18px var(--display);color:var(--berry)}
+.busy>div{background:#fff;border-radius:18px;padding:20px 26px;border:2px solid var(--pink)}
+.cam-ov{position:fixed;inset:0;background:#1d1217;z-index:30;display:flex;flex-direction:column}
+.cam-ov video{flex:1;min-height:0;width:100%;object-fit:contain;background:#000}
+.cam-ctl{display:flex;align-items:center;justify-content:space-between;padding:16px 20px calc(16px + env(safe-area-inset-bottom,0px));gap:12px}
+.shot{width:72px;height:72px;border-radius:50%;border:5px solid #fff;background:var(--fuchsia);cursor:pointer;flex:none}
+.shot:active{background:var(--pink)}
+.cam-ctl .side{flex:1;color:#fff;font:700 16px var(--display)}
+.cam-ctl .done{background:#fff;color:var(--berry);border:0;border-radius:12px;padding:12px 18px;font:700 16px var(--display);cursor:pointer}
+.flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+.flash.on{animation:fl .25s}
+@keyframes fl{from{opacity:.8}to{opacity:0}}
+:focus-visible{outline:3px solid var(--berry);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){.flash.on{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>סורק PDF של חן</h1>
+    <p class="sub">מצלמת או בוחרת מהגלריה, ומקבלת PDF נקי כמו מסורק</p>
+  </header>
+
+  <div class="actions">
+    <button class="big cam" id="btnCam" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+      צילום מסמך
+    </button>
+    <button class="big gal" id="btnGal" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="M21 16l-5-5-8 8"/></svg>
+      מהגלריה
+    </button>
+  </div>
+  <input type="file" id="inGal" accept="image/*" multiple hidden>
+  <input type="file" id="inCam" accept="image/*" capture="environment" hidden>
+
+  <div id="empty" class="empty">
+    <b>עוד לא נוספו דפים</b>
+    <div class="steps">
+      <span class="step">1. מצלמים או בוחרים</span>
+      <span class="step">2. מסדרים ומסובבים</span>
+      <span class="step">3. שולחים</span>
+    </div>
+  </div>
+
+  <section id="work" hidden>
+    <div class="chips" id="chips" role="group" aria-label="סוג ניקוי">
+      <button class="chip" data-m="clean" aria-pressed="true">נקי</button>
+      <button class="chip" data-m="gray" aria-pressed="false">אפור</button>
+      <button class="chip" data-m="color" aria-pressed="false">צבעוני</button>
+      <button class="chip" data-m="orig" aria-pressed="false">מקורי</button>
+    </div>
+    <p class="count" id="count"></p>
+    <div class="grid" id="grid"></div>
+  </section>
+</div>
+
+<div class="bar" id="bar" hidden>
+  <div class="in">
+    <input class="name" id="fname" type="text" aria-label="שם הקובץ" autocomplete="off">
+    <div class="row">
+      <button class="btn share" id="bShare" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.6l6.8-4M8.6 13.4l6.8 4"/></svg>שיתוף</button>
+      <button class="btn wa" id="bWa" type="button">וואטסאפ</button>
+      <button class="btn mail" id="bMail" type="button">מייל</button>
+      <button class="btn dl" id="bDl" type="button">שמירה במכשיר</button>
+    </div>
+    <p class="note" id="note"></p>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+var pages=[], mode="clean", seq=0;
+var $=function(id){return document.getElementById(id)};
+var grid=$("grid"), MAXSRC=2200, MAXOUT=2000;
+
+var today=new Date();
+$("fname").value="סריקה "+today.getDate()+"."+(today.getMonth()+1)+"."+String(today.getFullYear()).slice(2);
+
+/* ---------- הוספת תמונות ---------- */
+function shrinkTo(canvas,maxSide){
+  var s=Math.min(1,maxSide/Math.max(canvas.width,canvas.height));
+  if(s>=1)return canvas;
+  var c=canvas, w=c.width, h=c.height, tw=Math.round(w*s), th=Math.round(h*s);
+  while(w>tw*2){
+    var n=document.createElement("canvas"); n.width=Math.round(w/2); n.height=Math.round(h/2);
+    var x=n.getContext("2d"); x.imageSmoothingQuality="high"; x.drawImage(c,0,0,n.width,n.height);
+    c=n; w=n.width; h=n.height;
+  }
+  var o=document.createElement("canvas"); o.width=tw; o.height=th;
+  var ox=o.getContext("2d"); ox.imageSmoothingQuality="high"; ox.drawImage(c,0,0,tw,th);
+  return o;
+}
+function fileToCanvas(file){
+  return new Promise(function(res,rej){
+    function fromImg(img){
+      var c=document.createElement("canvas"); c.width=img.naturalWidth||img.width; c.height=img.naturalHeight||img.height;
+      c.getContext("2d").drawImage(img,0,0); res(c);
+    }
+    if(window.createImageBitmap){
+      createImageBitmap(file,{imageOrientation:"from-image"}).then(function(b){
+        var c=document.createElement("canvas"); c.width=b.width; c.height=b.height;
+        c.getContext("2d").drawImage(b,0,0); if(b.close)b.close(); res(c);
+      }).catch(viaImg);
+    } else viaImg();
+    function viaImg(){
+      var u=URL.createObjectURL(file), im=new Image();
+      im.onload=function(){fromImg(im);URL.revokeObjectURL(u)};
+      im.onerror=function(){URL.revokeObjectURL(u);rej(new Error("load"))};
+      im.src=u;
+    }
+  });
+}
+function addCanvas(c){
+  var src=shrinkTo(c,MAXSRC);
+  pages.push({id:++seq,src:src,rot:0});
+}
+function addFiles(files){
+  var list=Array.prototype.slice.call(files||[]).filter(function(f){return /^image\//.test(f.type)||/\.(jpe?g|png|webp|heic)$/i.test(f.name)});
+  if(!list.length)return;
+  busy("מכינה את הדפים...");
+  list.reduce(function(p,f){
+    return p.then(function(){return fileToCanvas(f).then(addCanvas).catch(function(){})});
+  },Promise.resolve()).then(function(){unbusy();render()});
+}
+$("btnGal").onclick=function(){$("inGal").click()};
+$("inGal").onchange=function(e){addFiles(e.target.files);e.target.value=""};
+$("inCam").onchange=function(e){addFiles(e.target.files);e.target.value=""};
+
+/* ---------- מצלמה ---------- */
+var stream=null, ov=null, shots=0;
+$("btnCam").onclick=function(){
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){$("inCam").click();return}
+  navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:2560},height:{ideal:1920}},audio:false})
+    .then(openCam).catch(function(){$("inCam").click()});
+};
+function openCam(s){
+  stream=s; shots=0;
+  ov=document.createElement("div"); ov.className="cam-ov";
+  ov.innerHTML='<video playsinline muted autoplay></video><div class="flash"></div><div class="cam-ctl"><div class="side" id="shotN">מצלמת דף ראשון</div><button class="shot" aria-label="צילום" type="button"></button><div class="side" style="text-align:left"><button class="done" type="button">סיום</button></div></div>';
+  document.body.appendChild(ov);
+  var v=ov.querySelector("video"); v.srcObject=s; v.play().catch(function(){});
+  ov.querySelector(".shot").onclick=function(){
+    if(!v.videoWidth)return;
+    var c=document.createElement("canvas"); c.width=v.videoWidth; c.height=v.videoHeight;
+    c.getContext("2d").drawImage(v,0,0);
+    addCanvas(c); shots++;
+    $("shotN").textContent="צולמו "+shots+" דפים";
+    var f=ov.querySelector(".flash"); f.classList.remove("on"); void f.offsetWidth; f.classList.add("on");
+    if(navigator.vibrate)navigator.vibrate(30);
+  };
+  ov.querySelector(".done").onclick=closeCam;
+}
+function closeCam(){
+  if(stream){stream.getTracks().forEach(function(t){t.stop()});stream=null}
+  if(ov){ov.remove();ov=null}
+  render();
+}
+
+/* ---------- ניקוי: סורק ---------- */
+function rotated(src,rot){
+  if(!rot)return src;
+  var c=document.createElement("canvas"), sw=rot%180===0;
+  c.width=sw?src.width:src.height; c.height=sw?src.height:src.width;
+  var x=c.getContext("2d"); x.translate(c.width/2,c.height/2); x.rotate(rot*Math.PI/180);
+  x.drawImage(src,-src.width/2,-src.height/2); return c;
+}
+function dilate(d,w,h){
+  var o=new Uint8ClampedArray(d.length);
+  for(var y=0;y<h;y++)for(var x=0;x<w;x++){
+    var m0=0,m1=0,m2=0;
+    for(var dy=-1;dy<=1;dy++){var yy=y+dy; if(yy<0||yy>=h)continue;
+      for(var dx=-1;dx<=1;dx++){var xx=x+dx; if(xx<0||xx>=w)continue;
+        var i=(yy*w+xx)*4; if(d[i]>m0)m0=d[i]; if(d[i+1]>m1)m1=d[i+1]; if(d[i+2]>m2)m2=d[i+2];}}
+    var j=(y*w+x)*4; o[j]=m0;o[j+1]=m1;o[j+2]=m2;o[j+3]=255;
+  }
+  return o;
+}
+function enhance(c,m){
+  if(m==="orig")return c;
+  var w=c.width,h=c.height, ctx=c.getContext("2d");
+  var tw=Math.max(8,Math.round(w/14)), small=shrinkTo(c,Math.max(tw,Math.round(tw*h/w)));
+  var sw=small.width, sh=small.height, sctx=small.getContext("2d");
+  var sd=sctx.getImageData(0,0,sw,sh);
+  var dd=dilate(dilate(sd.data,sw,sh),sw,sh);
+  sd.data.set(dd); sctx.putImageData(sd,0,0);
+  var bgc=document.createElement("canvas"); bgc.width=w; bgc.height=h;
+  var bx=bgc.getContext("2d"); bx.imageSmoothingEnabled=true; bx.imageSmoothingQuality="high"; bx.drawImage(small,0,0,w,h);
+  var img=ctx.getImageData(0,0,w,h), bg=bx.getImageData(0,0,w,h), a=img.data, b=bg.data;
+  var lo,hi;
+  if(m==="clean"){lo=105;hi=225}else if(m==="gray"){lo=50;hi=232}else{lo=60;hi=232}
+  var k=255/(hi-lo);
+  for(var i=0;i<a.length;i+=4){
+    if(m==="color"){
+      for(var q=0;q<3;q++){var v=a[i+q]/Math.max(b[i+q],1)*255; v=(v-lo)*k; a[i+q]=v<0?0:v>255?255:v;}
+    } else {
+      var g=0.299*a[i]+0.587*a[i+1]+0.114*a[i+2], gb=0.299*b[i]+0.587*b[i+1]+0.114*b[i+2];
+      var v2=g/Math.max(gb,1)*255; v2=(v2-lo)*k; v2=v2<0?0:v2>255?255:v2;
+      a[i]=a[i+1]=a[i+2]=v2;
+    }
+  }
+  ctx.putImageData(img,0,0); return c;
+}
+function makePage(p,maxSide,m){
+  var r=rotated(p.src,p.rot);
+  var c=document.createElement("canvas"), s=Math.min(1,maxSide/Math.max(r.width,r.height));
+  if(s<1){var t=shrinkTo(r,maxSide);c.width=t.width;c.height=t.height;c.getContext("2d").drawImage(t,0,0)}
+  else{c.width=r.width;c.height=r.height;c.getContext("2d").drawImage(r,0,0)}
+  var white=document.createElement("canvas");white.width=c.width;white.height=c.height;
+  var wx=white.getContext("2d");wx.fillStyle="#fff";wx.fillRect(0,0,c.width,c.height);wx.drawImage(c,0,0);
+  return enhance(white,m);
+}
+
+/* ---------- תצוגה ---------- */
+var ICON={
+  rot:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.5-5.8"/><path d="M20 4v5h-5"/></svg>',
+  fwd:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>',
+  back:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>',
+  del:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/></svg>'
+};
+function render(){
+  var has=pages.length>0;
+  $("empty").hidden=has; $("work").hidden=!has; $("bar").hidden=!has;
+  $("count").textContent=has?(pages.length===1?"דף אחד":pages.length+" דפים"):"";
+  grid.innerHTML="";
+  pages.forEach(function(p,i){
+    var card=document.createElement("div"); card.className="card";
+    var th=document.createElement("div"); th.className="thumb";
+    var num=document.createElement("span"); num.className="num"; num.textContent=i+1; th.appendChild(num);
+    var tools=document.createElement("div"); tools.className="tools";
+    tools.innerHTML='<button class="r" aria-label="סיבוב">'+ICON.rot+'</button>'+
+      '<button class="b" aria-label="הקדמה" '+(i===0?"disabled":"")+'>'+ICON.back+'</button>'+
+      '<button class="f" aria-label="הזזה אחורה" '+(i===pages.length-1?"disabled":"")+'>'+ICON.fwd+'</button>'+
+      '<button class="del" aria-label="מחיקה">'+ICON.del+'</button>';
+    tools.querySelector(".r").onclick=function(){p.rot=(p.rot+90)%360;render()};
+    tools.querySelector(".b").onclick=function(){move(i,-1)};
+    tools.querySelector(".f").onclick=function(){move(i,1)};
+    tools.querySelector(".del").onclick=function(){pages.splice(i,1);render()};
+    card.appendChild(th); card.appendChild(tools); grid.appendChild(card);
+    setTimeout(function(){
+      var c=makePage(p,420,mode); th.insertBefore(c,num);
+    },i*30);
+  });
+}
+function move(i,d){var j=i+d; if(j<0||j>=pages.length)return; var t=pages[i];pages[i]=pages[j];pages[j]=t;render()}
+$("chips").onclick=function(e){
+  var b=e.target.closest(".chip"); if(!b)return; mode=b.dataset.m;
+  Array.prototype.forEach.call($("chips").children,function(x){x.setAttribute("aria-pressed",x===b?"true":"false")});
+  render();
+};
+
+/* ---------- בניית PDF ---------- */
+var enc=new TextEncoder();
+function canvasJpeg(c){
+  return new Promise(function(res){c.toBlob(function(b){b.arrayBuffer().then(function(ab){res(new Uint8Array(ab))})},"image/jpeg",0.85)});
+}
+function buildPdf(items){
+  var chunks=[],len=0,offs=[];
+  function push(b){if(typeof b==="string")b=enc.encode(b);chunks.push(b);len+=b.length}
+  function obj(n,fn){offs[n]=len;push(n+" 0 obj\n");fn();push("\nendobj\n")}
+  var N=2+items.length*3;
+  push("%PDF-1.4\n%\xE2\xE3\xCF\xD3\n");
+  obj(1,function(){push("<< /Type /Catalog /Pages 2 0 R >>")});
+  var kids=items.map(function(_,i){return (3+i*3)+" 0 R"}).join(" ");
+  obj(2,function(){push("<< /Type /Pages /Kids ["+kids+"] /Count "+items.length+" >>")});
+  items.forEach(function(it,i){
+    var pg=3+i*3, ct=pg+1, im=pg+2;
+    var pw=595.28, ph=841.89; if(it.w>it.h){var t=pw;pw=ph;ph=t}
+    var s=Math.min(pw/it.w,ph/it.h), dw=it.w*s, dh=it.h*s, dx=(pw-dw)/2, dy=(ph-dh)/2;
+    obj(pg,function(){push("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 "+pw.toFixed(2)+" "+ph.toFixed(2)+"] /Resources << /XObject << /Im0 "+im+" 0 R >> >> /Contents "+ct+" 0 R >>")});
+    var cs="q "+dw.toFixed(2)+" 0 0 "+dh.toFixed(2)+" "+dx.toFixed(2)+" "+dy.toFixed(2)+" cm /Im0 Do Q";
+    obj(ct,function(){push("<< /Length "+cs.length+" >>\nstream\n"+cs+"\nendstream")});
+    obj(im,function(){
+      push("<< /Type /XObject /Subtype /Image /Width "+it.w+" /Height "+it.h+" /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length "+it.jpg.length+" >>\nstream\n");
+      push(it.jpg); push("\nendstream");
+    });
+  });
+  var xr=len; push("xref\n0 "+(N+1)+"\n0000000000 65535 f \n");
+  for(var n=1;n<=N;n++)push(("0000000000"+offs[n]).slice(-10)+" 00000 n \n");
+  push("trailer\n<< /Size "+(N+1)+" /Root 1 0 R >>\nstartxref\n"+xr+"\n%%EOF");
+  return new Blob(chunks,{type:"application/pdf"});
+}
+function fileName(){
+  var n=($("fname").value||"סריקה").replace(/[\\\/:*?"<>|]+/g," ").trim()||"סריקה";
+  return n.replace(/\.pdf$/i,"")+".pdf";
+}
+function makePdf(){
+  busy("יוצרת את ה-PDF...");
+  return pages.reduce(function(p,pg){
+    return p.then(function(arr){
+      return new Promise(function(r){setTimeout(r,10)}).then(function(){
+        var c=makePage(pg,MAXOUT,mode);
+        return canvasJpeg(c).then(function(jpg){arr.push({w:c.width,h:c.height,jpg:jpg});return arr});
+      });
+    });
+  },Promise.resolve([])).then(function(items){unbusy();return buildPdf(items)})
+   .catch(function(e){unbusy();throw e});
+}
+
+/* ---------- שיתוף ---------- */
+function note(t){$("note").textContent=t}
+function download(blob,name){
+  var u=URL.createObjectURL(blob), a=document.createElement("a");
+  a.href=u; a.download=name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function(){URL.revokeObjectURL(u)},4000);
+}
+function canShareFile(file){return navigator.canShare&&navigator.share&&navigator.canShare({files:[file]})}
+function act(kind){
+  if(!pages.length)return;
+  makePdf().then(function(blob){
+    var name=fileName(), file=new File([blob],name,{type:"application/pdf"});
+    if(kind!=="dl"&&canShareFile(file)){
+      return navigator.share({files:[file],title:name.replace(/\.pdf$/,"")})
+        .then(function(){note(kind==="share"?"נשלח":"בחרי ברשימה את "+(kind==="wa"?"וואטסאפ":"האפליקציה של המייל"))})
+        .catch(function(e){if(e&&e.name==="AbortError")note("השיתוף בוטל");else{download(blob,name);note("הקובץ נשמר במכשיר")}});
+    }
+    download(blob,name);
+    if(kind==="wa"){note("הקובץ נשמר. מצרפים אותו בשיחה בוואטסאפ.");setTimeout(function(){window.open("https://wa.me/","_blank")},400)}
+    else if(kind==="mail"){note("הקובץ נשמר. מצרפים אותו למייל.");setTimeout(function(){location.href="mailto:?subject="+encodeURIComponent(name.replace(/\.pdf$/,""))+"&body="+encodeURIComponent("מצורף קובץ PDF.")},400)}
+    else note("הקובץ נשמר במכשיר");
+  }).catch(function(){note("משהו השתבש, נסי שוב")});
+}
+$("bShare").onclick=function(){act("share")};
+$("bWa").onclick=function(){act("wa")};
+$("bMail").onclick=function(){act("mail")};
+$("bDl").onclick=function(){act("dl")};
+
+/* ---------- עזר ---------- */
+function busy(t){unbusy();var d=document.createElement("div");d.className="busy";d.id="busy";d.innerHTML="<div>"+t+"</div>";document.body.appendChild(d)}
+function unbusy(){var d=$("busy");if(d)d.remove()}
+if("serviceWorker" in navigator){try{navigator.serviceWorker.register("sw.js")}catch(e){}}
+})();
+</script>
+</body>
+</html>

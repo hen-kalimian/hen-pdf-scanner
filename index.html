@@ -82,6 +82,23 @@ h1{font:800 28px/1.2 var(--display);margin:0;color:var(--berry)}
 @keyframes fl{from{opacity:.8}to{opacity:0}}
 :focus-visible{outline:3px solid var(--berry);outline-offset:2px}
 @media(prefers-reduced-motion:reduce){.flash.on{animation:none}}
+
+.top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 10px}
+.top .count{margin:0}
+.newbtn{border:0;background:var(--fuchsia);color:#fff;border-radius:999px;padding:9px 16px;font:700 14px var(--display);cursor:pointer}
+.hist{margin-top:26px}
+.hist h2{font:800 20px var(--display);color:var(--berry);margin:0 0 10px}
+.h-item{background:var(--paper);border:2px solid var(--line);border-radius:16px;padding:10px;display:flex;gap:12px;align-items:center;margin-bottom:10px}
+.h-item img{width:56px;height:72px;object-fit:cover;border-radius:8px;background:#f6eef1;flex:none;border:1px solid var(--line)}
+.h-main{flex:1;min-width:0}
+.h-name{font:700 16px var(--display);overflow-wrap:anywhere}
+.h-meta{font-size:13px;color:var(--muted)}
+.h-btns{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.h-btns button{border:0;border-radius:10px;padding:7px 12px;font:600 13px var(--body);cursor:pointer;background:var(--pink-bg);color:var(--berry)}
+.h-btns .go{background:var(--fuchsia);color:#fff}
+.h-btns .rm{color:#C0264F}
+.h-edit{display:flex;gap:6px}
+.h-edit input{flex:1;min-width:0;border:2px solid var(--pink);border-radius:10px;padding:6px 8px;font:600 15px var(--body)}
 </style>
 </head>
 <body>
@@ -119,9 +136,15 @@ h1{font:800 28px/1.2 var(--display);margin:0;color:var(--berry)}
       <button class="chip" data-m="gray" aria-pressed="false">אפור</button>
       <button class="chip" data-m="color" aria-pressed="false">צבעוני</button>
       <button class="chip" data-m="orig" aria-pressed="false">מקורי</button>
+      <button class="chip" id="cropChip" type="button" aria-pressed="true">חיתוך שוליים</button>
     </div>
-    <p class="count" id="count"></p>
+    <div class="top"><p class="count" id="count"></p><button class="newbtn" id="bNew" type="button">סרוק קובץ חדש</button></div>
     <div class="grid" id="grid"></div>
+  </section>
+
+  <section class="hist" id="hist" hidden>
+    <h2>הסריקות שלי</h2>
+    <div id="histList"></div>
   </section>
 </div>
 
@@ -146,8 +169,10 @@ var pages=[], mode="clean", seq=0;
 var $=function(id){return document.getElementById(id)};
 var grid=$("grid"), MAXSRC=2200, MAXOUT=2000;
 
-var today=new Date();
-$("fname").value="סריקה "+today.getDate()+"."+(today.getMonth()+1)+"."+String(today.getFullYear()).slice(2);
+function pad(n){return (n<10?"0":"")+n}
+function defName(){var t=new Date();return "סריקה "+t.getDate()+"."+(t.getMonth()+1)+"."+String(t.getFullYear()).slice(2)+" "+pad(t.getHours())+"."+pad(t.getMinutes())}
+$("fname").value=defName();
+var recId=null;
 
 /* ---------- הוספת תמונות ---------- */
 function shrinkTo(canvas,maxSide){
@@ -273,8 +298,31 @@ function enhance(c,m){
   }
   ctx.putImageData(img,0,0); return c;
 }
+var cropOn=true;
+function autoCrop(c){
+  var W=c.width,H=c.height, sm=shrinkTo(c,240), w=sm.width, h=sm.height;
+  var d=sm.getContext("2d").getImageData(0,0,w,h).data, g=new Uint8Array(w*h), hist=new Array(256).fill(0), i;
+  for(i=0;i<w*h;i++){var v=Math.round(0.299*d[i*4]+0.587*d[i*4+1]+0.114*d[i*4+2]);g[i]=v;hist[v]++}
+  var tot=w*h, sum=0; for(i=0;i<256;i++)sum+=i*hist[i];
+  var sB=0,wB=0,best=0,thr=128;
+  for(i=0;i<256;i++){wB+=hist[i];if(!wB)continue;var wF=tot-wB;if(!wF)break;sB+=i*hist[i];
+    var mB=sB/wB,mF=(sum-sB)/wF,bt=wB*wF*(mB-mF)*(mB-mF);if(bt>best){best=bt;thr=i}}
+  var rows=new Float32Array(h), cols=new Float32Array(w);
+  for(var y=0;y<h;y++)for(var x=0;x<w;x++)if(g[y*w+x]>thr){rows[y]++;cols[x]++}
+  var ry=[0,h-1],cx=[0,w-1], y0=0,y1=h-1,x0=0,x1=w-1;
+  while(y0<h&&rows[y0]/w<0.5)y0++; while(y1>y0&&rows[y1]/w<0.5)y1--;
+  while(x0<w&&cols[x0]/h<0.5)x0++; while(x1>x0&&cols[x1]/h<0.5)x1--;
+  if(x1-x0<w*0.3||y1-y0<h*0.3)return c;
+  var padX=Math.round((x1-x0)*0.012), padY=Math.round((y1-y0)*0.012);
+  x0=Math.min(w-1,x0+padX); x1=Math.max(x0+1,x1-padX); y0=Math.min(h-1,y0+padY); y1=Math.max(y0+1,y1-padY);
+  var sx=W/w, sy=H/h, cw=Math.round((x1-x0+1)*sx), ch=Math.round((y1-y0+1)*sy);
+  if(cw>=W*0.985&&ch>=H*0.985)return c;
+  var o=document.createElement("canvas"); o.width=cw; o.height=ch;
+  o.getContext("2d").drawImage(c,Math.round(x0*sx),Math.round(y0*sy),cw,ch,0,0,cw,ch); return o;
+}
 function makePage(p,maxSide,m){
   var r=rotated(p.src,p.rot);
+  if(cropOn&&m!=="orig")r=autoCrop(r);
   var c=document.createElement("canvas"), s=Math.min(1,maxSide/Math.max(r.width,r.height));
   if(s<1){var t=shrinkTo(r,maxSide);c.width=t.width;c.height=t.height;c.getContext("2d").drawImage(t,0,0)}
   else{c.width=r.width;c.height=r.height;c.getContext("2d").drawImage(r,0,0)}
@@ -293,7 +341,8 @@ var ICON={
 function render(){
   var has=pages.length>0;
   $("empty").hidden=has; $("work").hidden=!has; $("bar").hidden=!has;
-  $("count").textContent=has?(pages.length===1?"דף אחד":pages.length+" דפים"):"";
+  $("count").textContent=has?(pages.length===1?"דף אחד":pages.length+" דפים, יחד ב-PDF אחד"):"";
+  $("empty").hidden=has||histCount>0;
   grid.innerHTML="";
   pages.forEach(function(p,i){
     var card=document.createElement("div"); card.className="card";
@@ -316,8 +365,10 @@ function render(){
 }
 function move(i,d){var j=i+d; if(j<0||j>=pages.length)return; var t=pages[i];pages[i]=pages[j];pages[j]=t;render()}
 $("chips").onclick=function(e){
-  var b=e.target.closest(".chip"); if(!b)return; mode=b.dataset.m;
-  Array.prototype.forEach.call($("chips").children,function(x){x.setAttribute("aria-pressed",x===b?"true":"false")});
+  var b=e.target.closest(".chip"); if(!b)return;
+  if(b.id==="cropChip"){cropOn=!cropOn;b.setAttribute("aria-pressed",cropOn?"true":"false");render();return}
+  mode=b.dataset.m;
+  Array.prototype.forEach.call($("chips").children,function(x){if(x.id!=="cropChip")x.setAttribute("aria-pressed",x===b?"true":"false")});
   render();
 };
 
@@ -379,7 +430,7 @@ function download(blob,name){
 function canShareFile(file){return navigator.canShare&&navigator.share&&navigator.canShare({files:[file]})}
 function act(kind){
   if(!pages.length)return;
-  makePdf().then(function(blob){
+  makePdf().then(function(blob){return saveRec(blob).then(function(){return blob},function(){return blob})}).then(function(blob){
     var name=fileName(), file=new File([blob],name,{type:"application/pdf"});
     if(kind!=="dl"&&canShareFile(file)){
       return navigator.share({files:[file],title:name.replace(/\.pdf$/,"")})
@@ -396,6 +447,76 @@ $("bShare").onclick=function(){act("share")};
 $("bWa").onclick=function(){act("wa")};
 $("bMail").onclick=function(){act("mail")};
 $("bDl").onclick=function(){act("dl")};
+
+/* ---------- היסטוריה ---------- */
+var db=null, histCount=0;
+function dbOpen(){return new Promise(function(res){
+  try{var r=indexedDB.open("hen-scanner",1);
+    r.onupgradeneeded=function(){r.result.createObjectStore("files",{keyPath:"id",autoIncrement:true})};
+    r.onsuccess=function(){db=r.result;res(db)}; r.onerror=function(){res(null)};
+  }catch(e){res(null)}})}
+function dbAll(){return new Promise(function(res){
+  if(!db)return res([]);
+  try{var q=db.transaction("files").objectStore("files").getAll();q.onsuccess=function(){res(q.result||[])};q.onerror=function(){res([])}}catch(e){res([])}})}
+function dbPut(rec){return new Promise(function(res,rej){
+  if(!db)return rej();
+  try{var q=db.transaction("files","readwrite").objectStore("files").put(rec);q.onsuccess=function(){res(q.result)};q.onerror=function(){rej()}}catch(e){rej()}})}
+function dbGet(id){return new Promise(function(res){
+  try{var q=db.transaction("files").objectStore("files").get(id);q.onsuccess=function(){res(q.result)};q.onerror=function(){res(null)}}catch(e){res(null)}})}
+function dbDel(id){return new Promise(function(res){
+  try{var t=db.transaction("files","readwrite");t.objectStore("files").delete(id);t.oncomplete=function(){res()};t.onerror=function(){res()}}catch(e){res()}})}
+function saveRec(blob){
+  var th=makePage(pages[0],220,mode).toDataURL("image/jpeg",0.6);
+  var rec={name:fileName().replace(/\.pdf$/i,""),date:Date.now(),pages:pages.length,thumb:th,blob:blob};
+  if(recId)rec.id=recId;
+  return dbPut(rec).then(function(id){recId=id;return renderHistory()});
+}
+function fmtDate(t){var d=new Date(t);return d.getDate()+"."+(d.getMonth()+1)+"."+String(d.getFullYear()).slice(2)+" "+pad(d.getHours())+":"+pad(d.getMinutes())}
+function shareRec(rec){
+  var name=rec.name+".pdf", file=new File([rec.blob],name,{type:"application/pdf"});
+  if(canShareFile(file)){navigator.share({files:[file],title:rec.name}).catch(function(e){if(!e||e.name!=="AbortError")download(rec.blob,name)})}
+  else download(rec.blob,name);
+}
+function renderHistory(){
+  return dbAll().then(function(list){
+    list.sort(function(a,b){return b.date-a.date});
+    histCount=list.length;
+    $("hist").hidden=!list.length;
+    $("empty").hidden=pages.length>0||list.length>0;
+    var box=$("histList"); box.innerHTML="";
+    list.forEach(function(rec){
+      var it=document.createElement("div"); it.className="h-item";
+      var img=document.createElement("img"); img.alt=""; img.src=rec.thumb;
+      var main=document.createElement("div"); main.className="h-main";
+      var nm=document.createElement("div"); nm.className="h-name"; nm.textContent=rec.name;
+      var mt=document.createElement("div"); mt.className="h-meta"; mt.textContent=fmtDate(rec.date)+" · "+(rec.pages===1?"דף אחד":rec.pages+" דפים");
+      var bt=document.createElement("div"); bt.className="h-btns";
+      bt.innerHTML='<button class="go">שיתוף</button><button class="sv">שמירה</button><button class="rn">שינוי שם</button><button class="rm">הסרה</button>';
+      bt.querySelector(".go").onclick=function(){shareRec(rec)};
+      bt.querySelector(".sv").onclick=function(){download(rec.blob,rec.name+".pdf")};
+      bt.querySelector(".rn").onclick=function(){
+        var ed=document.createElement("div"); ed.className="h-edit";
+        ed.innerHTML='<input type="text" aria-label="שם חדש"><button class="go">שמירה</button>';
+        var inp=ed.querySelector("input"); inp.value=rec.name;
+        nm.replaceWith(ed); inp.focus(); inp.select();
+        function ok(){var v=inp.value.replace(/[\\\/:*?"<>|]+/g," ").trim();if(!v)return;
+          dbGet(rec.id).then(function(r){r.name=v;return dbPut(r)}).then(renderHistory)}
+        ed.querySelector("button").onclick=ok; inp.onkeydown=function(e){if(e.key==="Enter")ok()};
+      };
+      bt.querySelector(".rm").onclick=function(){
+        var b=bt.querySelector(".rm");
+        if(b.dataset.sure!=="1"){b.dataset.sure="1";b.textContent="להסיר? לחצי שוב";setTimeout(function(){b.dataset.sure="";b.textContent="הסרה"},4000);return}
+        dbDel(rec.id).then(function(){if(recId===rec.id)recId=null;renderHistory()});
+      };
+      main.appendChild(nm); main.appendChild(mt); main.appendChild(bt);
+      it.appendChild(img); it.appendChild(main); box.appendChild(it);
+    });
+  });
+}
+$("bNew").onclick=function(){
+  pages=[]; recId=null; $("fname").value=defName(); note(""); render(); window.scrollTo(0,0);
+};
+dbOpen().then(renderHistory);
 
 /* ---------- עזר ---------- */
 function busy(t){unbusy();var d=document.createElement("div");d.className="busy";d.id="busy";d.innerHTML="<div>"+t+"</div>";document.body.appendChild(d)}
