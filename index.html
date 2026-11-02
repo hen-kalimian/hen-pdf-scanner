@@ -106,6 +106,7 @@ h1{font:800 28px/1.2 var(--display);margin:0;color:var(--berry)}
   <header>
     <h1>סורק PDF של חן</h1>
     <p class="sub">מצלמת או בוחרת מהגלריה, ומקבלת PDF נקי כמו מסורק</p>
+    <p class="sub" style="font-size:12px">גרסה 2 · היסטוריה וחיתוך שוליים</p>
   </header>
 
   <div class="actions">
@@ -521,7 +522,7 @@ dbOpen().then(renderHistory);
 /* ---------- עזר ---------- */
 function busy(t){unbusy();var d=document.createElement("div");d.className="busy";d.id="busy";d.innerHTML="<div>"+t+"</div>";document.body.appendChild(d)}
 function unbusy(){var d=$("busy");if(d)d.remove()}
-if("serviceWorker" in navigator){try{navigator.serviceWorker.register("sw.js")}catch(e){}}
+if("serviceWorker" in navigator){try{navigator.serviceWorker.register("sw.js").then(function(r){r.update()});var rl=false;navigator.serviceWorker.addEventListener("controllerchange",function(){if(rl||!navigator.serviceWorker.controller)return;rl=true;if(!pages.length)location.reload()})}catch(e){}}
 })();
 </script>
 </body>
